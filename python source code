@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+"""
+ML Network Intrusion Detector — beginner-friendly demonstration.
+
+IMPORTANT:
+This project trains and evaluates a model on a deterministic, locally generated
+SYNTHETIC dataset. The records are not captured from real networks and are not
+a substitute for validation on a public benchmark or an organization's traffic.
+No network scanning or packet capture is performed.
+
+Run:
+    python Adithya_R_Nair_ML_Network_Intrusion_Detector.py
+Optional:
+    python Adithya_R_Nair_ML_Network_Intrusion_Detector.py --samples 2000 --output-dir results
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    precision_score,
+    recall_score,
+    f1_score,
+)
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.utils import check_random_state
+
+FEATURES = [
+    "duration_seconds",
+    "source_bytes",
+    "destination_bytes",
+    "packet_count",
+    "failed_connection_rate",
+    "destination_port_risk",
+    "syn_packet_rate",
+    "bytes_per_packet",
+]
+LABEL = "label"
+
+
+def make_synthetic_flows(n_samples: int = 1600, random_state: int = 42) -> pd.DataFrame:
+    """Create safe synthetic flow-like data for a reproducible demonstration."""
+    if n_samples < 200:
+        raise ValueError("--samples must be at least 200 for a useful train/test split.")
+
+    rng = check_random_state(random_state)
+    n_attack = n_samples // 2
+    n_normal = n_samples - n_attack
+
+    # Normal flows: moderate packet counts and low scan/failure indicators.
+    normal_duration = rng.lognormal(mean=1.6, sigma=0.65, size=n_normal)
+    normal_src = rng.lognormal(mean=7.0, sigma=1.0, size=n_normal)
+    normal_dst = rng.lognormal(mean=7.2, sigma=1.0, size=n_normal)
+    normal_packets = rng.poisson(lam=24, size=n_normal) + 1
+    normal_failed = rng.beta(a=1.2, b=16, size=n_normal)
+    normal_port_risk = rng.beta(a=1.5, b=10, size=n_normal)
+    normal_syn = rng.beta(a=1.5, b=12, size=n_normal)
+
+    # Attack-like flows combine scan/DoS/brute-force-style statistical patterns.
+    # These are generated patterns, not real attack captures.
+    attack_duration = rng.lognormal(mean=0.3, sigma=0.9, size=n_attack)
+    attack_src = rng.lognormal(mean=6.0, sigma=1.3, size=n_attack)
+    attack_dst = rng.lognormal(mean=4.8, sigma=1.5, size=n_attack)
+    attack_packets = rng.poisson(lam=65, size=n_attack) + 1
+    attack_failed = rng.beta(a=5.5, b=2.2, size=n_attack)
+    attack_port_risk = rng.beta(a=5.0, b=2.5, size=n_attack)
+    attack_syn = rng.beta(a=5.5, b=2.0, size=n_attack)
+
+    normal = pd.DataFrame({
+        "duration_seconds": normal_duration,
+        "source_bytes": normal_src,
+        "destination_bytes": normal_dst,
+        "packet_count": normal_packets,
+        "failed_connection_rate": normal_failed,
+        "destination_port_risk": normal_port_risk,
+        "syn_packet_rate": normal_syn,
+    })
+    attack = pd.DataFrame({
+        "duration_seconds": attack_duration,
+        "source_bytes": attack_src,
+        "destination_bytes": attack_dst,
+        "packet_count": attack_packets,
+        "failed_connection_rate": attack_failed,
+        "destination_port_risk": attack_port_risk,
+        "syn_packet_rate": attack_syn,
+    })
+    for frame in (normal, attack):
+        frame["bytes_per_packet"] = (
+            (frame["source_bytes"] + frame["destination_bytes"])
+            / frame["packet_count"].clip(lower=1)
+        )
+    normal[LABEL] = "normal"
+    attack[LABEL] = "attack"
+    data = pd.concat([normal, attack], ignore_index=True)
+    # Shuffle rows reproducibly so labels are not grouped by class.
+    return data.sample(frac=1, random_state=random_state).reset_index(drop=True)
+
+
+def train_and_evaluate(data: pd.DataFrame, output_dir: Path) -> dict:
+    """Train a baseline classifier, evaluate held-out data, and save artifacts."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    X = data[FEATURES]
+    y = data[LABEL]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.25, random_state=42, stratify=y
+    )
+
+    model = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+        ("classifier", RandomForestClassifier(
+            n_estimators=150, random_state=42, class_weight="balanced"
+        )),
+    ])
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+
+    accuracy = accuracy_score(y_test, predictions)
+    precision = precision_score(y_test, predictions, pos_label="attack", zero_division=0)
+    recall = recall_score(y_test, predictions, pos_label="attack", zero_division=0)
+    f1 = f1_score(y_test, predictions, pos_label="attack", zero_division=0)
+    cm = confusion_matrix(y_test, predictions, labels=["normal", "attack"])
+    report = classification_report(y_test, predictions, labels=["normal", "attack"], zero_division=0)
+
+    data.to_csv(output_dir / "synthetic_network_flows.csv", index=False)
+    metrics = {
+        "dataset_type": "synthetic, locally generated; not real network traffic",
+        "total_samples": int(len(data)),
+        "training_samples": int(len(X_train)),
+        "test_samples": int(len(X_test)),
+        "features": FEATURES,
+        "accuracy": float(accuracy),
+        "attack_precision": float(precision),
+        "attack_recall": float(recall),
+        "attack_f1": float(f1),
+        "confusion_matrix_labels": ["normal", "attack"],
+        "confusion_matrix": cm.tolist(),
+        "classification_report": report,
+    }
+    with (output_dir / "metrics.json").open("w", encoding="utf-8") as f:
+        json.dump(metrics, f, indent=2)
+    with (output_dir / "classification_report.txt").open("w", encoding="utf-8") as f:
+        f.write("Synthetic-data demonstration — held-out test results\n")
+        f.write("WARNING: Results are from synthetic data, not a real-world benchmark.\n\n")
+        f.write(report)
+        f.write("\nConfusion matrix (rows=true [normal, attack], columns=predicted [normal, attack]):\n")
+        f.write(str(cm))
+        f.write("\n")
+
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["normal", "attack"])
+    disp.plot(values_format="d")
+    plt.title("Confusion Matrix — Synthetic Demonstration")
+    plt.tight_layout()
+    plt.savefig(output_dir / "confusion_matrix.png", dpi=160)
+    plt.close()
+
+    importances = model.named_steps["classifier"].feature_importances_
+    importance_df = pd.DataFrame({"feature": FEATURES, "importance": importances})
+    importance_df = importance_df.sort_values("importance", ascending=True)
+    ax = importance_df.plot(kind="barh", x="feature", y="importance", legend=False)
+    ax.set_title("Random Forest Feature Importance (Synthetic Data)")
+    ax.set_xlabel("Importance")
+    ax.set_ylabel("Feature")
+    plt.tight_layout()
+    plt.savefig(output_dir / "feature_importance.png", dpi=160)
+    plt.close()
+
+    # Save model only if joblib is available through scikit-learn's dependencies.
+    import joblib
+    joblib.dump(model, output_dir / "intrusion_detector_model.joblib")
+
+    print("ML Network Intrusion Detector — demonstration complete")
+    print(f"Dataset: synthetic local data ({len(data)} rows; no network traffic captured)")
+    print(f"Train/test rows: {len(X_train)}/{len(X_test)}")
+    print(f"Accuracy:  {accuracy:.4f}")
+    print(f"Precision (attack): {precision:.4f}")
+    print(f"Recall (attack):    {recall:.4f}")
+    print(f"F1-score (attack):  {f1:.4f}")
+    print("\nClassification report:\n" + report)
+    print(f"Artifacts saved to: {output_dir.resolve()}")
+    return metrics
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Train a beginner-friendly ML intrusion detector demo.")
+    parser.add_argument("--samples", type=int, default=1600, help="Number of synthetic flow rows (minimum 200; default 1600).")
+    parser.add_argument("--output-dir", default="results", help="Directory for generated CSV, metrics, plots, and model.")
+    args = parser.parse_args()
+    data = make_synthetic_flows(n_samples=args.samples)
+    train_and_evaluate(data, Path(args.output_dir))
+
+
+if __name__ == "__main__":
+    main()
