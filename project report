@@ -1,0 +1,190 @@
+Student Name: Adithya R Nair
+
+Programme: IBM SkillsBuild Cyber Security 2026
+
+Implementation: Python, Pandas, Scikit-learn, Matplotlib
+
+Model: Random Forest classifier
+
+Dataset: Deterministic, locally generated synthetic flow-like records
+
+Project Report
+
+
+
+Abstract
+This project demonstrates a beginner-friendly machine-learning workflow for identifying network-flow records that resemble suspicious activity. A Random Forest classifier is trained to distinguish two labels, normal and attack, using eight numeric features. The application generates a reproducible synthetic dataset locally, splits it into training and test sets, evaluates held-out predictions, and saves metrics, plots, a CSV, and a trained model. The data is synthetic and is not captured from a live network. Consequently, the scores demonstrate the workflow on generated patterns only; they do not establish real-world detection performance.
+
+1. Introduction
+Network intrusion detection seeks to identify activity that may indicate unauthorized access, scanning, denial-of-service behavior, or other misuse. Machine-learning systems learn statistical relationships from labeled examples. This project introduces the supervised-learning workflow in a controlled, offline environment.
+
+2. Problem Statement
+Build a reproducible Python application that classifies flow-like records as normal or attack-like, reports standard metrics on held-out data, and saves artifacts for inspection and repeatability.
+
+3. Objectives
+• Generate a deterministic synthetic dataset with normal and attack-like labels.
+• Use a stratified train/test split.
+• Train a Random Forest classifier within a preprocessing pipeline.
+• Measure accuracy, attack precision, attack recall, F1-score, and a confusion matrix.
+• Save metrics, visualizations, generated data, and the trained model.
+• Explain safety boundaries, limitations, and future work.
+4. Scope and Safety
+The code generates synthetic records locally. It does not perform packet capture, scanning, exploitation, or network requests. Attack-like rows are statistical patterns invented for this exercise, not verified records of malicious activity. This is an educational prototype, not a deployable security control. Any real traffic collection must be authorized and follow privacy and retention requirements.
+
+5. Tools and Technologies
+Tool / library
+
+Purpose
+
+Python 3.10+
+
+Application code and runtime
+
+Pandas
+
+Tabular data representation and CSV export
+
+Scikit-learn
+
+Preprocessing, train/test split, Random Forest, evaluation
+
+Matplotlib
+
+Confusion matrix and feature-importance plots
+
+joblib
+
+Serialization of the trained model pipeline
+
+6. Dataset and Features
+The default run creates 1,600 synthetic rows, balanced between normal and attack-like labels. A fixed random seed makes the example reproducible. The eight features are:
+
+• duration_seconds — simulated duration of a flow.
+• source_bytes and destination_bytes — simulated byte counts.
+• packet_count — simulated packet count.
+• failed_connection_rate — synthetic rate-like indicator.
+• destination_port_risk — synthetic port-risk indicator.
+• syn_packet_rate — synthetic SYN-rate indicator.
+• bytes_per_packet — derived from byte counts and packet count.
+The names are inspired by network-flow measurements, but the values do not come from packet captures or a real dataset. The generated attack-like class has intentionally distinctive patterns, so the task is easier than real intrusion detection.
+
+7. Methodology
+Data generation: Create normal and attack-like numeric samples using a fixed random state and shuffle the rows.
+
+Split: Use a stratified 75% training / 25% test split with a fixed seed.
+
+Preprocessing: Apply median imputation and standard scaling in a scikit-learn pipeline. The generated data has no missing values; imputation is included for pipeline completeness.
+
+Training: Fit a RandomForestClassifier with 150 trees, a fixed random seed, and balanced class weights.
+
+Evaluation: Predict held-out labels and calculate accuracy, attack-class precision, attack-class recall, F1-score, and a classification report.
+
+Outputs: Save CSV and JSON/text metrics, a confusion-matrix plot, feature-importance plot, and serialized model.
+
+8. Results and Evaluation
+The script was executed during preparation with the default 1,600 synthetic rows. The values below are actual outputs observed in that run. They describe this generated dataset only and must not be presented as expected performance on real network traffic.
+
+Measure
+
+Observed value
+
+Total synthetic rows
+
+1600
+
+Training rows
+
+1200
+
+Held-out test rows
+
+400
+
+Accuracy
+
+1.0000
+
+Attack precision
+
+1.0000
+
+Attack recall
+
+1.0000
+
+Attack F1-score
+
+1.0000
+
+Confusion matrix convention: rows are true labels [normal, attack], columns are predicted labels [normal, attack].
+
+True label
+
+Predicted normal
+
+Predicted attack
+
+True normal
+
+200
+
+0
+
+True attack
+
+0
+
+200
+
+Detailed classification report:
+
+             precision    recall  f1-score   support
+
+     normal       1.00      1.00      1.00       200
+     attack       1.00      1.00      1.00       200
+
+   accuracy                           1.00       400
+  macro avg       1.00      1.00      1.00       400
+weighted avg       1.00      1.00      1.00       400
+
+Confusion matrix from the preparation run:
+
+
+
+Feature importance from the preparation run:
+
+
+
+The observed perfect scores are a warning about the simplicity of the synthetic data, not evidence that the detector can identify real intrusions. The synthetic classes are generated from noticeably different feature distributions, which can make them unusually easy to separate.
+
+9. How to Run
+1. Install Python 3.10 or newer.
+2. Optionally create a virtual environment: python -m venv .venv, then activate it.
+3. Install dependencies: python -m pip install -r requirements.txt
+4. Run: python Adithya_R_Nair_ML_Network_Intrusion_Detector.py
+5. Inspect the printed metrics and the results/ directory.
+Optional arguments: --samples 2000 changes the generated row count (minimum 200); --output-dir results chooses the output directory.
+
+10. Limitations
+• The dataset is synthetic, not a public benchmark or real network traffic.
+• Generated attack-like patterns do not cover the diversity of actual attacks.
+• Scores may be inflated because generated patterns can be easy to distinguish.
+• No live data ingestion, streaming inference, alert delivery, or analyst review is implemented.
+• Feature importance reflects this model and dataset; it does not prove causation.
+• Do not deploy this model to make security decisions without independent evaluation.
+11. Future Improvements
+• Evaluate on a documented and appropriately licensed public dataset such as CICIDS2017 or UNSW-NB15.
+• Record dataset provenance, preprocessing choices, licensing, class imbalance, and leakage checks.
+• Compare multiple models and tune thresholds using a validation set.
+• Report false-positive rate and per-class metrics across different attack families.
+• Add validated CSV inference and clear input/error handling.
+• Assess concept drift, explainability, monitoring, and human review before any operational use.
+12. Conclusion
+This project demonstrates data generation, preprocessing, supervised model training, held-out evaluation, and artifact creation in Python. It is a reproducible learning prototype. Because the data is synthetic and the observed scores are perfect on the generated test split, further evaluation on a realistic, properly documented dataset is essential before drawing conclusions about real-world intrusion detection.
+
+References
+• Scikit-learn documentation: https://scikit-learn.org/stable/
+• Pandas documentation: https://pandas.pydata.org/docs/
+• Matplotlib documentation: https://matplotlib.org/stable/
+• Canadian Institute for Cybersecurity datasets: https://www.unb.ca/cic/datasets/
+• UNSW-NB15 dataset information: https://research.unsw.edu.au/projects/unsw-nb15-dataset
