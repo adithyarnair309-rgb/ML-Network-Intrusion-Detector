@@ -1,0 +1,104 @@
+# ML Network Intrusion Detector
+
+**Student:** Adithya R Nair  
+**Programme:** IBM SkillsBuild Cyber Security 2026  
+**Project type:** Beginner-friendly machine-learning cybersecurity demonstration
+
+## Overview
+
+This project trains a Random Forest classifier to distinguish **normal** from **attack-like** network-flow records using eight numeric features. It demonstrates a basic machine-learning workflow: create/load data, split into training and test sets, train a model, evaluate held-out predictions, and save metrics and plots.
+
+> **Important data and safety note:** The included project generates a deterministic **synthetic** dataset locally. It is not captured from a live network, is not a public benchmark, and does not represent real attackers or production traffic. The project performs no scanning, exploitation, packet capture, or network requests. The metrics show that the implementation works on the generated patterns; they must not be interpreted as real-world detection performance.
+
+## Files
+
+- `Adithya_R_Nair_ML_Network_Intrusion_Detector.py` — runnable source code.
+- `requirements.txt` — Python dependencies.
+- `Adithya_R_Nair_ProjectReport.docx` — project documentation.
+- `README.md` — setup and usage instructions.
+
+When the script runs, it creates a `results/` folder containing:
+- `synthetic_network_flows.csv` — generated sample records and labels.
+- `metrics.json` and `classification_report.txt` — evaluation results.
+- `confusion_matrix.png` — test-set confusion matrix.
+- `feature_importance.png` — Random Forest feature-importance plot.
+- `intrusion_detector_model.joblib` — trained model pipeline.
+
+## Requirements
+
+- Python 3.10 or newer recommended.
+- `pip`.
+- Internet access is needed only if you must install packages; the script itself does not access the internet.
+
+## Setup
+
+Open a terminal in the project folder and run:
+
+```bash
+python -m venv .venv
+```
+
+Activate the environment:
+
+**Windows**
+```bash
+.venv\Scripts\activate
+```
+
+**macOS/Linux**
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+## Run
+
+```bash
+python Adithya_R_Nair_ML_Network_Intrusion_Detector.py
+```
+
+To generate 2,000 synthetic rows and save artifacts to a custom directory:
+
+```bash
+python Adithya_R_Nair_ML_Network_Intrusion_Detector.py --samples 2000 --output-dir results
+```
+
+The minimum accepted sample count is 200. The default is 1,600 rows and a fixed random seed for reproducibility.
+
+## Features used
+
+1. `duration_seconds` — synthetic flow duration.
+2. `source_bytes` — synthetic source-to-flow byte count.
+3. `destination_bytes` — synthetic destination byte count.
+4. `packet_count` — synthetic packet count.
+5. `failed_connection_rate` — synthetic indicator for failed connections.
+6. `destination_port_risk` — synthetic port-risk indicator.
+7. `syn_packet_rate` — synthetic SYN packet-rate indicator.
+8. `bytes_per_packet` — derived byte-per-packet feature.
+
+The labels are `normal` and `attack`. The attack-like class is generated from statistical patterns designed for this educational example; it is not mapped to confirmed real attack labels.
+
+## Evaluation
+
+The script prints accuracy, attack precision, attack recall, attack F1-score, and a classification report based on a stratified 75%/25% train/test split. It saves the results to `results/metrics.json`.
+
+**Do not report expected numbers as actual results.** Run the script in your environment and use the metrics it prints. Results documented in the accompanying report are from the generation/run performed while preparing this submission and may vary slightly with dependency versions.
+
+## Limitations and future improvements
+
+- Synthetic patterns can be easier to separate than real network traffic.
+- The dataset does not model network context, temporal behavior, or changing attack tactics.
+- A high score on synthetic data does not demonstrate readiness for deployment.
+- Future work could evaluate on a properly licensed public dataset such as CICIDS2017 or UNSW-NB15, document dataset provenance, prevent train/test leakage, assess class imbalance, and tune thresholds using a validation set.
+- Any real traffic collection or scanning should be performed only with explicit authorization and appropriate privacy safeguards.
+
+## Troubleshooting
+
+- If `python` is not found, install Python 3.10+ and ensure it is on your PATH.
+- If a dependency is missing, activate the virtual environment and rerun `python -m pip install -r requirements.txt`.
+- If plotting fails in a headless environment, the script uses Matplotlib's non-interactive `Agg` backend and should save plots without opening a window.
